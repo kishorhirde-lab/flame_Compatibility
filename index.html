@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLAME University — HEI Benchmarking Dashboard 2024</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --flame-green: #1d9e75;
+    --flame-green-light: #e1f5ee;
+    --flame-green-mid: #5dcaa5;
+    --blue: #378add;
+    --blue-light: #e6f1fb;
+    --amber: #ef9f27;
+    --amber-light: #faeeda;
+    --red: #e24b4a;
+    --red-light: #fcebeb;
+    --purple: #7f77dd;
+    --purple-light: #eeedfe;
+    --gray-50: #f8f8f6;
+    --gray-100: #f1efe8;
+    --gray-200: #e2e0d8;
+    --gray-400: #a0a09a;
+    --gray-600: #5f5e5a;
+    --gray-800: #2c2c2a;
+    --white: #ffffff;
+    --text: #1a1a18;
+    --text-muted: #6b6b66;
+    --text-faint: #9a9a95;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.14);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    --font: 'DM Sans', system-ui, sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); background: var(--gray-50); color: var(--text); font-size: 13px; line-height: 1.5; }
+
+  /* ── Layout ── */
+  .page { max-width: 1400px; margin: 0 auto; padding: 20px 16px 60px; }
+  .topbar { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; box-shadow: var(--shadow-sm); }
+  .topbar-left h1 { font-size: 18px; font-weight: 600; letter-spacing: -.3px; }
+  .topbar-left p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .layout { display: grid; grid-template-columns: 210px 1fr 230px; gap: 12px; }
+  @media(max-width:900px){ .layout { grid-template-columns: 1fr; } }
+  .sidebar, .rightpanel { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Cards / Panels ── */
+  .panel { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; box-shadow: var(--shadow-sm); }
+  .panel-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+
+  /* ── Badges ── */
+  .badge { font-size: 9px; padding: 2px 7px; border-radius: 20px; font-weight: 600; display: inline-block; }
+  .b-pub { background: var(--blue-light); color: #185fa5; }
+  .b-pvt { background: var(--amber-light); color: #854f0b; }
+  .b-dmd { background: var(--purple-light); color: #534ab7; }
+  .b-app { background: var(--flame-green-light); color: #0f6e56; }
+  .b-ap  { background: var(--blue-light); color: #185fa5; }
+  .b-a   { background: var(--amber-light); color: #854f0b; }
+  .b-live { background: var(--flame-green-light); color: var(--flame-green); font-size: 10px; padding: 3px 9px; }
+  .b-ver  { background: var(--blue-light); color: #185fa5; font-size: 10px; padding: 3px 9px; }
+  .b-corr { background: var(--red-light); color: #a32d2d; font-size: 8px; padding: 1px 5px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tab { padding: 6px 14px; border-radius: var(--radius); font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); color: var(--text-muted); background: transparent; transition: all .15s; }
+  .tab:hover { background: var(--gray-100); }
+  .tab.active { background: var(--flame-green); color: white; border-color: var(--flame-green); }
+
+  /* ── Buttons ── */
+  .btn { padding: 6px 13px; border: 1px solid var(--border-strong); border-radius: var(--radius); font-size: 11px; font-weight: 500; color: var(--text-muted); background: var(--white); cursor: pointer; font-family: var(--font); transition: all .15s; }
+  .btn:hover { background: var(--gray-100); }
+  .btn-primary { background: var(--flame-green); color: white; border-color: var(--flame-green); }
+  .btn-primary:hover { background: #0f6e56; }
+
+  /* ── Form controls ── */
+  select, input[type=range] { font-family: var(--font); }
+  select { background: var(--gray-50); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 5px 8px; font-size: 11px; color: var(--text); cursor: pointer; }
+
+  /* ── KPI cards ── */
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .kpi { background: var(--gray-50); border-radius: var(--radius); padding: 8px 10px; text-align: center; border: 1px solid var(--border); }
+  .kpi .v { font-size: 15px; font-weight: 600; }
+  .kpi .l { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── Main table ── */
+  .table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead th { position: sticky; top: 0; z-index: 2; background: var(--gray-100); padding: 7px 9px; text-align: left; font-weight: 600; font-size: 9.5px; color: var(--text-muted); border-bottom: 1px solid var(--border-strong); white-space: nowrap; letter-spacing: .03em; }
+  tbody td { padding: 6px 9px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.flame-row td { background: #f0fbf6; }
+  tbody tr:hover td { background: var(--gray-50); cursor: pointer; }
+  .inst-name { font-weight: 600; font-size: 11px; }
+  .inst-sub { font-size: 9px; color: var(--text-muted); }
+
+  /* ── Compat bar ── */
+  .compat-wrap { display: flex; align-items: center; gap: 5px; }
+  .compat-bg { width: 52px; height: 5px; background: var(--gray-200); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+  .compat-fill { height: 100%; border-radius: 3px; }
+
+  /* ── Source links ── */
+  .src-link { font-size: 10px; color: var(--blue); text-decoration: none; background: var(--blue-light); padding: 2px 7px; border-radius: 8px; display: inline-block; margin: 2px 2px 2px 0; }
+  .src-link:hover { text-decoration: underline; }
+
+  /* ── Feed ── */
+  .feed-item { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .feed-text { font-size: 10.5px; color: var(--text); line-height: 1.5; }
+  .feed-time { font-size: 9px; color: var(--text-faint); margin-top: 2px; }
+
+  /* ── AI insight ── */
+  .ai-box { background: var(--flame-green-light); border: 1px solid #9fe1cb; border-radius: var(--radius); padding: 11px; }
+  .ai-box p { font-size: 11px; color: #0f6e56; line-height: 1.65; }
+  .ai-label { font-size: 9px; font-weight: 600; color: var(--flame-green); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+  .pulse { width: 6px; height: 6px; background: var(--flame-green); border-radius: 50%; animation: pulse 1.6s infinite; display: inline-block; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+  /* ── Profile drawer ── */
+  .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200; }
+  .drawer-overlay.open { display: block; }
+  .drawer { position: fixed; top: 0; right: 0; width: 400px; height: 100%; background: var(--white); border-left: 1px solid var(--border-strong); z-index: 201; overflow-y: auto; padding: 20px; box-shadow: -4px 0 24px rgba(0,0,0,.12); transform: translateX(100%); transition: transform .25s cubic-bezier(.4,0,.2,1); }
+  .drawer.open { transform: translateX(0); }
+  .drawer-close { float: right; font-size: 20px; cursor: pointer; background: none; border: none; color: var(--text-muted); line-height: 1; }
+  .drawer-close:hover { color: var(--text); }
+  .drawer h2 { font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+  .drawer-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+  .drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 10px 0; }
+  .dg-cell { background: var(--gray-50); border-radius: var(--radius); padding: 8px 10px; border: 1px solid var(--border); }
+  .dg-cell .v { font-size: 15px; font-weight: 600; }
+  .dg-cell .l { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+  .drawer-section { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin: 14px 0 6px; border-top: 1px solid var(--border); padding-top: 10px; }
+
+  /* ── Charts section ── */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:700px){ .charts-row { grid-template-columns: 1fr; } }
+
+  /* ── Corrections ── */
+  .corr-item { display: grid; grid-template-columns: 160px 1fr 1fr; gap: 8px; padding: 8px 10px; background: var(--gray-50); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 5px; font-size: 11px; align-items: center; }
+  .corr-old { color: #a32d2d; text-decoration: line-through; font-size: 10.5px; }
+  .corr-new { color: var(--flame-green); font-weight: 600; font-size: 10.5px; }
+
+  /* ── Legend ── */
+  .legend { display: flex; gap: 14px; font-size: 10px; color: var(--text-muted); flex-wrap: wrap; margin-top: 7px; }
+  .ld { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 3px; }
+
+  /* ── Source ref table ── */
+  .src-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .src-table th { background: var(--gray-100); padding: 7px 10px; text-align: left; font-weight: 600; font-size: 10px; color: var(--text-muted); border-bottom: 1px solid var(--border-strong); }
+  .src-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .src-table tr:hover td { background: var(--gray-50); }
+  .src-table a { color: var(--blue); text-decoration: none; font-size: 10.5px; }
+  .src-table a:hover { text-decoration: underline; }
+
+  /* ── Notice bar ── */
+  .notice { background: #fff8ed; border: 1px solid #fcd89a; border-radius: var(--radius); padding: 9px 13px; font-size: 11px; color: #854f0b; margin-bottom: 12px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>FLAME University — HEI Benchmarking Dashboard</h1>
+    <p>Top 20 Indian Higher Education Institutions &nbsp;·&nbsp; NIRF 2024 verified &nbsp;·&nbsp; IQAC / NAAC / AACSB decision-support tool</p>
+  </div>
+  <div class="topbar-right">
+    <span class="badge b-live"><span class="pulse"></span> &nbsp;Live simulated feed</span>
+    <span class="badge b-ver">Data verified Apr 2026</span>
+    <select id="moduleSelect" onchange="switchModule(this.value)">
+      <option value="main">Module 1 — Comparison table</option>
+      <option value="iqac">Module 2 — IQAC analytics</option>
+      <option value="profiles">Module 3 — Profiles & sources</option>
+    </select>
+  </div>
+</div>
+
+<div class="notice">
+  <strong>Key corrections applied from original dashboard:</strong> FLAME campus 56ac→<strong>70ac</strong>; NAAC A→<strong>A++</strong>; avg pkg ₹11.2L→<strong>₹9.63L</strong>; IIT Madras NIRF #2→<strong>#1</strong>; IIM-A avg pkg 32L→<strong>₹34.45L</strong>; accreditation AACSB→<strong>EQUIS</strong>; Ashoka NIRF #35→<strong>Band 101-150</strong>; JGU NAAC A+→<strong>A</strong>; BITS NIRF #26→<strong>#23</strong>; JNU #2 Univ→<strong>#10 Overall</strong>; BHU #5→<strong>#11 Overall</strong>; DU #11→<strong>#15 Overall</strong>.
+</div>
+
+<!-- ═══════════════════════════════════ MODULE 1 ═══════════════════════════════════ -->
+<div id="mod-main">
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="panel">
+      <div class="panel-title">Filters</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Institution type</label>
+          <select id="typeFilter" onchange="applyFilters()" style="width:100%"><option value="all">All types</option><option value="Public">Public / Central</option><option value="Private">Private</option><option value="Deemed">Deemed</option></select></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">Establishment era</label>
+          <select id="eraFilter" onchange="applyFilters()" style="width:100%"><option value="all">All eras</option><option value="post2000">Post-2000</option><option value="legacy">Legacy (pre-2000)</option></select></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">NIRF category</label>
+          <select id="catFilter" onchange="applyFilters()" style="width:100%"><option value="all">All categories</option><option value="mgmt">Management focus</option><option value="univ">University focus</option><option value="tech">Technical / IIT</option></select></div>
+        <div><label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">FLAME compatibility</label>
+          <select id="compatFilter" onchange="applyFilters()" style="width:100%"><option value="all">Show all</option><option value="high">High (≥70%)</option><option value="med">Medium (45–70%)</option><option value="low">Low (&lt;45%)</option></select></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">FLAME snapshot (verified)</div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="v">70</div><div class="l">Acres</div></div>
+        <div class="kpi"><div class="v">~3,000</div><div class="l">Students</div></div>
+        <div class="kpi"><div class="v">₹9.63L</div><div class="l">Avg pkg</div></div>
+        <div class="kpi"><div class="v">₹15.25L</div><div class="l">Highest pkg</div></div>
+        <div class="kpi"><div class="v">96%</div><div class="l">Placement %</div></div>
+        <div class="kpi"><div class="v">A++</div><div class="l">NAAC</div></div>
+      </div>
+      <div style="font-size:9px;color:var(--text-muted)">NIRF Univ Band #46 (2024) · Lavale, Pune · AACSB mentoring phase</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Accreditation status</div>
+      <div style="font-size:11px">
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>NAAC A++</span><span style="color:var(--flame-green);font-weight:600">Active</span></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>AACSB</span><span style="color:#854f0b;font-weight:600">In progress</span></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>EQUIS</span><span style="color:var(--text-faint)">Planned</span></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0"><span>NIRF 2024</span><span style="color:var(--flame-green);font-weight:600">Submitted</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN PANEL -->
+  <div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('table',this)">Comparison table</div>
+      <div class="tab" onclick="switchTab('charts',this)">Charts</div>
+      <div class="tab" onclick="switchTab('radar',this)">Radar</div>
+      <div class="tab" onclick="switchTab('corrections',this)">Corrections log</div>
+      <div class="tab" onclick="switchTab('sources',this)">All source URLs</div>
+    </div>
+
+    <!-- TABLE -->
+    <div id="view-table" class="panel" style="padding:10px">
+      <div class="table-wrap"><table id="mainTable">
+        <thead><tr>
+          <th>#</th><th>Institution</th><th>Type</th><th>Est.</th><th>Campus</th><th>Students</th>
+          <th>NIRF Overall</th><th>NIRF Mgmt</th><th>NIRF Univ</th><th>NAAC</th>
+          <th>Avg Pkg</th><th>High Pkg</th><th>Place%</th><th>AACSB/EQUIS</th><th>FLAME Compat.</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table></div>
+      <div class="legend">
+        <span><span class="ld" style="background:#1d9e75"></span>High compat (≥70%)</span>
+        <span><span class="ld" style="background:#ef9f27"></span>Medium (45–70%)</span>
+        <span><span class="ld" style="background:#e24b4a"></span>Low (&lt;45%)</span>
+        <span style="font-style:italic;color:var(--text-faint)">Click any row for full profile</span>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div id="view-charts" class="panel" style="display:none;padding:12px">
+      <div class="charts-row">
+        <div>
+          <div class="panel-title">Average placement package (₹L) — verified disclosures only</div>
+          <div style="position:relative;height:280px"><canvas id="pkgChart" role="img" aria-label="Bar chart of verified average placement packages">Verified package data for Indian HEIs.</canvas></div>
+        </div>
+        <div>
+          <div class="panel-title">Campus size vs student strength</div>
+          <div style="position:relative;height:280px"><canvas id="scatterChart" role="img" aria-label="Scatter plot of campus area vs student strength">Campus vs students scatter.</canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="panel-title">NIRF rank vs FLAME compatibility index</div>
+        <div style="position:relative;height:200px"><canvas id="bubbleChart" role="img" aria-label="Bubble chart of NIRF rank vs compatibility">NIRF rank vs compat bubble chart.</canvas></div>
+      </div>
+    </div>
+
+    <!-- RADAR -->
+    <div id="view-radar" class="panel" style="display:none;padding:12px">
+      <div class="panel-title">Radar — FLAME vs selected institution</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:1;min-width:260px">
+          <select id="radarPeer" onchange="renderRadar()" style="width:100%;margin-bottom:10px"><option value="">Select institution...</option></select>
+          <div style="position:relative;height:280px"><canvas id="radarChart" role="img" aria-label="Radar comparison chart">Radar comparison.</canvas></div>
+        </div>
+        <div id="radarNote" style="min-width:170px;max-width:210px;font-size:11px;color:var(--text-muted);line-height:1.65;padding-top:40px"></div>
+      </div>
+    </div>
+
+    <!-- CORRECTIONS -->
+    <div id="view-corrections" class="panel" style="display:none;padding:12px">
+      <div class="panel-title">Complete corrections log — original vs verified 2024</div>
+      <div style="display:grid;grid-template-columns:160px 1fr 1fr 2fr;gap:0;padding:0 10px;margin-bottom:6px">
+        <span style="font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase">Institution</span>
+        <span style="font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase">Old (wrong)</span>
+        <span style="font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase">New (correct)</span>
+        <span style="font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase">Source</span>
+      </div>
+      <div id="corrList"></div>
+    </div>
+
+    <!-- SOURCES -->
+    <div id="view-sources" class="panel" style="display:none;padding:12px">
+      <div class="panel-title">All verified source URLs — NIRF 2024 + official institutional sites</div>
+      <div style="overflow-x:auto"><table class="src-table" id="srcTable"></table></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="rightpanel">
+    <div class="panel">
+      <div class="panel-title">AI insight</div>
+      <div class="ai-box">
+        <div class="ai-label"><span class="pulse"></span>Live analysis</div>
+        <p>FLAME's closest peers by compatibility are <strong>Ashoka (88%)</strong>, <strong>SPJIMR (76%)</strong> and <strong>JGU (72%)</strong>. The single largest gap for AACSB accreditation is PhD faculty ratio (target 90% SA-status vs current ~62%). Research output (180 pubs vs JGU's 1,800+) is the biggest barrier to NAAC A++ upgrade.</p>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:11px" onclick="alert('In the live version, this triggers IQAC report generation via Claude API')">Draft NAAC SSR executive summary</button>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Live feed</div>
+      <div id="feedPanel"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Quick source links</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <a href="https://www.nirfindia.org/Rankings/2024/OverallRanking.html" class="src-link" target="_blank">NIRF Overall 2024</a>
+        <a href="https://www.nirfindia.org/Rankings/2024/ManagementRanking.html" class="src-link" target="_blank">NIRF Management 2024</a>
+        <a href="https://www.nirfindia.org/Rankings/2024/UniversityRanking.html" class="src-link" target="_blank">NIRF University 2024</a>
+        <a href="https://www.flame.edu.in" class="src-link" target="_blank">FLAME official site</a>
+        <a href="https://www.naac.gov.in" class="src-link" target="_blank">NAAC official</a>
+        <a href="https://aishe.gov.in" class="src-link" target="_blank">AISHE data portal</a>
+        <a href="https://www.ugc.gov.in" class="src-link" target="_blank">UGC official</a>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /mod-main -->
+
+<!-- ═══════════════════════════════════ MODULE 2 ═══════════════════════════════════ -->
+<div id="mod-iqac" style="display:none">
+  <div class="tabs">
+    <div class="tab active" onclick="switchIqacTab('trends',this)">5-year trends</div>
+    <div class="tab" onclick="switchIqacTab('gap',this)">Gap analysis</div>
+    <div class="tab" onclick="switchIqacTab('accred',this)">Accreditation tracker</div>
+  </div>
+  <div id="iqac-trends">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+      <div class="kpi panel" style="text-align:center"><div class="v" style="font-size:20px;font-weight:600">₹9.63L</div><div class="l" style="margin-top:4px;color:var(--text-muted)">Median pkg 2024</div><div style="font-size:10px;color:var(--flame-green);margin-top:3px;font-weight:600">+24% vs 2021</div></div>
+      <div class="kpi panel" style="text-align:center"><div class="v" style="font-size:20px;font-weight:600">96%</div><div class="l" style="margin-top:4px;color:var(--text-muted)">Placement rate 2024</div><div style="font-size:10px;color:var(--flame-green);margin-top:3px;font-weight:600">+11pp vs 2021</div></div>
+      <div class="kpi panel" style="text-align:center"><div class="v" style="font-size:20px;font-weight:600">180</div><div class="l" style="margin-top:4px;color:var(--text-muted)">Scopus publications</div><div style="font-size:10px;color:var(--flame-green);margin-top:3px;font-weight:600">+62% vs 2021</div></div>
+      <div class="kpi panel" style="text-align:center"><div class="v" style="font-size:20px;font-weight:600">62%</div><div class="l" style="margin-top:4px;color:var(--text-muted)">PhD faculty ratio</div><div style="font-size:10px;color:var(--flame-green);margin-top:3px;font-weight:600">+9pp vs 2021</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="panel"><div class="panel-title">Placement trend — FLAME vs peers (₹L avg pkg)</div><div style="position:relative;height:220px"><canvas id="trendChart" role="img" aria-label="Line chart of placement trends">Placement trend.</canvas></div></div>
+      <div class="panel"><div class="panel-title">Research output growth (publications)</div><div style="position:relative;height:220px"><canvas id="researchChart" role="img" aria-label="Bar chart of research publications">Research output.</canvas></div></div>
+    </div>
+  </div>
+  <div id="iqac-gap" style="display:none">
+    <div class="charts-row">
+      <div class="panel"><div class="panel-title">NAAC criterion-wise gap — FLAME vs A++ target</div><div id="naacGapBars"></div></div>
+      <div class="panel"><div class="panel-title">AACSB readiness radar (15 standards)</div><div style="position:relative;height:280px"><canvas id="aacsb-radar" role="img" aria-label="AACSB readiness radar">AACSB standards.</canvas></div></div>
+    </div>
+  </div>
+  <div id="iqac-accred" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="panel">
+        <div class="panel-title">NAAC cycle 3</div>
+        <span class="badge b-app" style="margin-bottom:8px">Active — Grade A++</span>
+        <div style="font-size:11px;line-height:1.7;color:var(--text-muted)">Valid: 2022–2027 · CGPA: 3.11/4.0<br>Criterion highlights:<br>C1 Curricular: 3.3 · C2 Teaching: 3.2<br>C3 Research: 2.8 ⚠ · C4 Infra: 2.9 ⚠<br>C5 Student: 3.4 · C6 Governance: 3.1<br>C7 Values: 2.7 ⚠</div>
+        <a href="https://www.naac.gov.in" class="src-link" target="_blank" style="margin-top:8px;display:inline-block">NAAC official</a>
+      </div>
+      <div class="panel">
+        <div class="panel-title">AACSB initial accreditation</div>
+        <span class="badge b-a" style="margin-bottom:8px">In progress</span>
+        <div style="font-size:11px;line-height:1.8;color:var(--text-muted)">
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:var(--flame-green);flex-shrink:0"></span>Eligibility application — Submitted</div>
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:var(--flame-green);flex-shrink:0"></span>Mentoring relationship — Active</div>
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0"></span>Self-Evaluation Report — In prep</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--text-faint)"><span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--border-strong);flex-shrink:0"></span>Peer Review Visit — 2026</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--text-faint)"><span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--border-strong);flex-shrink:0"></span>Board decision — 2027</div>
+        </div>
+        <a href="https://www.aacsb.edu" class="src-link" target="_blank" style="margin-top:8px;display:inline-block">AACSB official</a>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Other rankings & accreditations</div>
+        <div style="font-size:11px">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>NIRF University #46</span><span style="color:var(--flame-green);font-weight:600">2024</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>IIRF Overall</span><span style="color:var(--flame-green);font-weight:600">#19 (2024)</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>QS I-Gauge</span><span style="color:var(--flame-green);font-weight:600">Diamond rating</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>EQUIS</span><span style="color:var(--text-faint)">Planned 2027</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>AMBA</span><span style="color:var(--text-faint)">Under review</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /mod-iqac -->
+
+<!-- ═══════════════════════════════════ MODULE 3 ═══════════════════════════════════ -->
+<div id="mod-profiles" style="display:none">
+  <div class="tabs">
+    <div class="tab active" onclick="switchProfileTab('cards',this)">Profile cards</div>
+    <div class="tab" onclick="switchProfileTab('master',this)">Master source table</div>
+  </div>
+  <div id="prof-cards"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px" id="profileGrid"></div></div>
+  <div id="prof-master" style="display:none">
+    <div class="panel">
+      <div class="panel-title">Master source reference — all 20 institutions with verified URLs</div>
+      <div style="overflow-x:auto"><table class="src-table" id="masterSrcTable"></table></div>
+    </div>
+  </div>
+</div><!-- /mod-profiles -->
+
+</div><!-- /page -->
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()">&#x2715;</button>
+  <div id="drawerContent"></div>
+</div>
+
+<script>
+/* ── DATA ── */
+const HEI = [
+  {id:0,name:"FLAME University",short:"FLAME",type:"Private",cat:"mgmt",est:2015,loc:"Lavale, Pune, MH",campus:70,students:"~3,000",faculty:"~200",nirf_o:"Band 46 (Univ)",nirf_m:"Not ranked",nirf_u:"#46 (2024)",naac:"A++",naacCls:"b-app",aacsb:"In progress",avgPkg:"₹9.63L",highPkg:"₹15.25L",place:"96%",compat:100,flame:true,changed:false,
+   radar:[70,55,62,80,96,55],
+   srcs:[{l:"Official site",u:"https://www.flame.edu.in"},{l:"NIRF University 2024",u:"https://www.nirfindia.org/Rankings/2024/UniversityRanking.html"},{l:"Careers360",u:"https://www.careers360.com/university/flame-university-pune"},{l:"Shiksha",u:"https://www.shiksha.com/university/flame-university-pune-47736"},{l:"CollegeDunia",u:"https://collegedunia.com/university/5958-flame-university-pune"},{l:"CollegeDekho",u:"https://www.collegedekho.com/colleges/flame-university"}],
+   note:"Est. as FLAME School 2007; University Act 2014, status 2015. 70-acre eco-friendly campus in Lavale. NAAC A++ (corrected from A). Avg pkg ₹9.63L, highest ₹15.25L, 96% placed, 100+ recruiters (2025 batch). NIRF University band #46 (2024). AACSB mentoring phase active. QS I-Gauge Diamond rating.",corrs:[]},
+
+  {id:1,name:"IISc Bangalore",short:"IISc",type:"Public",cat:"tech",est:1909,loc:"Bangalore, KA",campus:400,students:"~4,500",faculty:"~550",nirf_o:"#2 Overall",nirf_m:"N/A",nirf_u:"N/A",naac:"A++",naacCls:"b-app",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Not published",compat:28,flame:false,changed:false,
+   radar:[100,100,100,30,10,100],
+   srcs:[{l:"NIRF Overall 2024",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"IISc official",u:"https://www.iisc.ac.in"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/Indian_Institute_of_Science"}],
+   note:"India's premier research institution. NIRF Overall #2 (2024). 400-acre campus. Primarily PhD and research. BS Research degree launched 2011. Placement data not published in standard format.",corrs:[]},
+
+  {id:2,name:"IIT Madras",short:"IITM",type:"Public",cat:"tech",est:1959,loc:"Chennai, TN",campus:620,students:"~10,500",faculty:"~750",nirf_o:"#1 Overall",nirf_m:"N/A",nirf_u:"N/A",naac:"A++",naacCls:"b-app",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Not published",compat:22,flame:false,changed:true,
+   radar:[95,100,100,35,25,85],
+   srcs:[{l:"NIRF Overall #1",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"IITM official",u:"https://www.iitm.ac.in"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/Indian_Institute_of_Technology_Madras"}],
+   note:"NIRF Overall #1 (2024) — corrected from #2 shown in previous version. 620-acre forest campus in Adyar, Chennai. World-class research and deep-tech placements. Department-level placement data only.",
+   corrs:[{f:"NIRF Overall rank",o:"#2",n:"#1",s:"nirfindia.org/Rankings/2024/OverallRanking.html"}]},
+
+  {id:3,name:"IIT Delhi",short:"IITD",type:"Public",cat:"tech",est:1961,loc:"New Delhi",campus:325,students:"~8,800",faculty:"~620",nirf_o:"#4 Overall",nirf_m:"#4 (DoMS)",nirf_u:"N/A",naac:"A++",naacCls:"b-app",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Not published",compat:26,flame:false,changed:false,
+   radar:[92,98,98,30,20,82],
+   srcs:[{l:"NIRF Overall 2024",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"IITD official",u:"https://home.iitd.ac.in"},{l:"NIRF Mgmt 2024",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"}],
+   note:"NIRF Overall #4 (2024). DoMS ranked #4 in NIRF Management 2024. 325-acre campus at Hauz Khas.",corrs:[]},
+
+  {id:4,name:"IIM Ahmedabad",short:"IIMA",type:"Public",cat:"mgmt",est:1961,loc:"Vastrapur, Ahmedabad, GJ",campus:102,students:"~1,200",faculty:"~120",nirf_o:"N/A (Mgmt only)",nirf_m:"#1 Management",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"EQUIS (2008)",avgPkg:"₹34.45L",highPkg:"₹146L",place:"100%",compat:65,flame:false,changed:true,
+   radar:[65,85,100,92,100,72],
+   srcs:[{l:"IIMA official",u:"https://www.iima.ac.in"},{l:"NIRF Mgmt #1",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"},{l:"IIMA placement report",u:"https://www01.iima.ac.in/iprs/placement-reports/iim-ahmedabad"},{l:"CollegeDekho",u:"https://www.collegedekho.com/colleges/iim-ahmedabad"}],
+   note:"NIRF Mgmt #1 for 5 consecutive years. 102-acre campus in Vastrapur. 2024 batch: avg ₹34.45L, highest domestic ₹146L, 100% placed, 188 companies. EQUIS-accredited since 2008 — NOT AACSB (corrected).",
+   corrs:[{f:"Avg pkg",o:"₹32L",n:"₹34.45L",s:"iima.ac.in placement report"},{f:"Highest pkg",o:"₹105L",n:"₹146L (domestic)",s:"iima.ac.in"},{f:"Accreditation",o:"AACSB: Yes",n:"EQUIS (not AACSB)",s:"iima.ac.in/about"}]},
+
+  {id:5,name:"Ashoka University",short:"Ashoka",type:"Private",cat:"univ",est:2014,loc:"Sonipat, HR",campus:25,students:"~2,600",faculty:"200+",nirf_o:"Band 101-150",nirf_m:"N/A",nirf_u:"Band 101-150",naac:"A",naacCls:"b-a",aacsb:"N/A",avgPkg:"₹10.5L",highPkg:"₹35L",place:"100% (2023)",compat:88,flame:false,changed:true,
+   radar:[25,65,88,75,90,55],
+   srcs:[{l:"Ashoka official",u:"https://www.ashoka.edu.in"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/Ashoka_University"},{l:"Careers360",u:"https://www.careers360.com/university/ashoka-university-sonepat"},{l:"CollegeDunia",u:"https://collegedunia.com/university/54839-ashoka-university-sonepat"},{l:"NIRF data PDF",u:"https://www.ashoka.edu.in/wp-content/uploads/2024/03/ASHOKA-UNIVERSITY20231228-.pdf"}],
+   note:"Founded 2014. 25-acre main campus (new 27-acre campus due 2027). 200+ faculty. NIRF University band 101-150. 2023: 100% placed, 351 students, 146 recruiters, avg ₹10.5L, highest ₹35L.",
+   corrs:[{f:"NIRF rank",o:"#35 University",n:"Band 101-150",s:"nirfindia.org / careers360.com"},{f:"Students",o:"3,800",n:"~2,600",s:"Wikipedia / ashoka.edu.in"}]},
+
+  {id:6,name:"OP Jindal Global Univ.",short:"JGU",type:"Private",cat:"univ",est:2009,loc:"Sonipat, HR",campus:90,students:"~9,000",faculty:"900+",nirf_o:"N/A",nirf_m:"Band 101-125",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"N/A",avgPkg:"₹6.6L (MA Pub Policy)",highPkg:"₹21L",place:"~83%",compat:72,flame:false,changed:true,
+   radar:[90,55,90,62,75,48],
+   srcs:[{l:"JGU official",u:"https://www.jgu.edu.in"},{l:"QS profile",u:"https://www.topuniversities.com/universities/op-jindal-global-university-jgu"},{l:"Shiksha",u:"https://www.shiksha.com/university/o-p-jindal-global-university-sonepat-51933"},{l:"Careers360",u:"https://www.careers360.com/university/op-jindal-global-university-sonipat"},{l:"CollegeDunia",u:"https://collegedunia.com/university/25542-op-jindal-global-university-jgu-sonepat"}],
+   note:"12 schools. ~80-100 acre campus. 1:9 faculty-student ratio. NAAC A (corrected from A+). NIRF Mgmt band 101-125 (2024). Institute of Eminence (2020). #1 in India for Law per QS. Avg ₹6.6L (MA Public Policy — only program with official disclosed data).",
+   corrs:[{f:"NAAC grade",o:"A+",n:"A",s:"jgu.edu.in / collegedunia.com"},{f:"NIRF rank",o:"#54 University",n:"Mgmt Band 101-125",s:"nirfindia.org 2024"},{f:"Avg pkg",o:"₹14.2L",n:"₹6.6L (official MA Pub Policy only)",s:"careers360.com"}]},
+
+  {id:7,name:"Shiv Nadar University",short:"SNU",type:"Private",cat:"univ",est:2011,loc:"Greater Noida, UP",campus:286,students:"~5,500",faculty:"~450",nirf_o:"Band 51-100",nirf_m:"N/A",nirf_u:"Band 51-100",naac:"A+",naacCls:"b-ap",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Not published",compat:68,flame:false,changed:false,
+   radar:[100,72,86,55,40,60],
+   srcs:[{l:"SNU official",u:"https://snu.edu.in"},{l:"NIRF University 2024",u:"https://www.nirfindia.org/Rankings/2024/UniversityRanking.html"},{l:"Careers360",u:"https://www.careers360.com/university/shiv-nadar-university-greater-noida"}],
+   note:"286-acre campus. NAAC A+. NIRF University band 51-100 (2024). Strong STEM + Liberal Arts integration. Placement data not officially published in standardised format.",corrs:[]},
+
+  {id:8,name:"BITS Pilani",short:"BITS",type:"Deemed",cat:"tech",est:1964,loc:"Pilani, RJ",campus:328,students:"~14,000",faculty:"~550",nirf_o:"#23 Overall",nirf_m:"N/A",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"~95% (est.)",compat:38,flame:false,changed:true,
+   radar:[100,78,82,35,35,70],
+   srcs:[{l:"NIRF Overall #23",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"BITS official",u:"https://www.bits-pilani.ac.in"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/BITS_Pilani"}],
+   note:"NIRF Overall #23 (2024) — corrected from #26. 328-acre campus at Pilani. Multiple campuses (Goa, Hyderabad, Dubai). Strong STEM placements.",
+   corrs:[{f:"NIRF Overall",o:"#26",n:"#23",s:"nirfindia.org/Rankings/2024/OverallRanking.html"}]},
+
+  {id:9,name:"Manipal Academy (MAHE)",short:"MAHE",type:"Deemed",cat:"univ",est:1953,loc:"Manipal, KA",campus:600,students:"~28,000",faculty:"~3,200",nirf_o:"#14 Overall",nirf_m:"N/A",nirf_u:"N/A",naac:"A++",naacCls:"b-app",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"~80% (est.)",compat:30,flame:false,changed:true,
+   radar:[100,65,68,28,30,55],
+   srcs:[{l:"NIRF Overall #14",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"MAHE official",u:"https://manipal.edu/mu.html"},{l:"CollegeDekho",u:"https://www.collegedekho.com/colleges/manipal-academy-of-higher-education"}],
+   note:"NIRF Overall #14 (2024). 600-acre campus. 19 constituent institutions. NAAC A++. Largest private deemed university by student count in this dataset.",
+   corrs:[{f:"NIRF rank",o:"#8 University",n:"#14 Overall",s:"nirfindia.org 2024"},{f:"NAAC",o:"Not shown as A++",n:"A++",s:"manipal.edu.in"}]},
+
+  {id:10,name:"University of Hyderabad",short:"UoH",type:"Public",cat:"univ",est:1974,loc:"Hyderabad, TS",campus:2300,students:"~7,000",faculty:"~420",nirf_o:"~Top 20 (Overall)",nirf_m:"N/A",nirf_u:"Top 15 (Univ)",naac:"A+",naacCls:"b-ap",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Not published",compat:28,flame:false,changed:false,
+   radar:[100,70,96,30,18,65],
+   srcs:[{l:"UoH official",u:"https://www.uohyd.ac.in"},{l:"NIRF University 2024",u:"https://www.nirfindia.org/Rankings/2024/UniversityRanking.html"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/University_of_Hyderabad"}],
+   note:"2300-acre campus — one of India's largest university campuses. Central university with strong humanities and sciences research output. NAAC A+.",corrs:[]},
+
+  {id:11,name:"Jawaharlal Nehru Univ.",short:"JNU",type:"Public",cat:"univ",est:1969,loc:"New Delhi",campus:1019,students:"~8,500",faculty:"~600",nirf_o:"#10 Overall",nirf_m:"N/A",nirf_u:"N/A",naac:"A++",naacCls:"b-app",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Not published",compat:20,flame:false,changed:true,
+   radar:[100,60,96,28,15,72],
+   srcs:[{l:"NIRF Overall #10",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"JNU official",u:"https://www.jnu.ac.in"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/Jawaharlal_Nehru_University"}],
+   note:"NIRF Overall #10 (2024). 1019-acre campus. Research and social sciences focus. NAAC A++.",
+   corrs:[{f:"NIRF rank",o:"#2 University",n:"#10 Overall",s:"nirfindia.org 2024"}]},
+
+  {id:12,name:"Banaras Hindu Univ.",short:"BHU",type:"Public",cat:"univ",est:1916,loc:"Varanasi, UP",campus:1350,students:"~30,000",faculty:"~2,000",nirf_o:"#11 Overall",nirf_m:"N/A",nirf_u:"N/A",naac:"A+",naacCls:"b-ap",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Not published",compat:18,flame:false,changed:true,
+   radar:[100,55,88,28,20,52],
+   srcs:[{l:"NIRF Overall #11",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"BHU official",u:"https://www.bhu.ac.in"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/Banaras_Hindu_University"}],
+   note:"NIRF Overall #11 (2024). 1350-acre campus — one of Asia's largest residential universities. 14+ faculties, 140+ departments. NAAC A+.",
+   corrs:[{f:"NIRF rank",o:"#5 University",n:"#11 Overall",s:"nirfindia.org 2024"}]},
+
+  {id:13,name:"IIM Bangalore",short:"IIMB",type:"Public",cat:"mgmt",est:1973,loc:"Bannerghatta Rd, Bangalore, KA",campus:100,students:"~1,050",faculty:"~110",nirf_o:"N/A (Mgmt only)",nirf_m:"#2 Management",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"Yes (AACSB)",avgPkg:"~₹28-30L",highPkg:"₹85L+",place:"100%",compat:58,flame:false,changed:false,
+   radar:[65,82,100,88,100,68],
+   srcs:[{l:"IIMB official",u:"https://www.iimb.ac.in"},{l:"NIRF Mgmt #2",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"},{l:"Careers360",u:"https://www.careers360.com/university/indian-institute-of-management-bangalore"}],
+   note:"NIRF Mgmt #2 (2024). AACSB accredited. 100-acre campus. 100% placement; highest ₹85L+. Avg varies by programme (PGP vs EPGP).",corrs:[]},
+
+  {id:14,name:"IIM Kozhikode",short:"IIMK",type:"Public",cat:"mgmt",est:1996,loc:"Kozhikode, KL",campus:100,students:"~900",faculty:"~90",nirf_o:"N/A (Mgmt only)",nirf_m:"#3 Management",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"Yes (AACSB)",avgPkg:"₹26.5L",highPkg:"₹62L",place:"100%",compat:55,flame:false,changed:false,
+   radar:[62,78,100,85,100,62],
+   srcs:[{l:"IIMK official",u:"https://www.iimk.ac.in"},{l:"NIRF Mgmt #3",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"},{l:"Shiksha",u:"https://www.shiksha.com/mba/articles/nirf-ranking-2024-top-mba-colleges-in-india-blogId-174803"}],
+   note:"NIRF Mgmt #3 (2024) — displaced IIM Calcutta. AACSB accredited. 100-acre hillside campus. 2024 batch: avg ₹26.5L, highest ₹62L, 100% placed.",corrs:[]},
+
+  {id:15,name:"IIM Calcutta",short:"IIMC",type:"Public",cat:"mgmt",est:1961,loc:"Joka, Kolkata, WB",campus:135,students:"~950",faculty:"~95",nirf_o:"N/A (Mgmt only)",nirf_m:"#4-5 Management",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"Yes (AACSB)",avgPkg:"~₹27-29L",highPkg:"₹78L",place:"100%",compat:52,flame:false,changed:true,
+   radar:[62,80,100,85,100,65],
+   srcs:[{l:"IIMC official",u:"https://www.iimcal.ac.in"},{l:"NIRF Mgmt 2024",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"},{l:"Careers360",u:"https://bschool.careers360.com/articles/nirf-management-ranking-2024-top-gainers-and-losers"}],
+   note:"NIRF Mgmt rank slipped to #4-5 (2024) after IIM Kozhikode moved to #3. AACSB accredited. 135-acre Joka campus. 100% placement.",
+   corrs:[{f:"NIRF Mgmt rank",o:"#3",n:"#4-5 (IIMK now #3)",s:"nirfindia.org / careers360.com 2024"}]},
+
+  {id:16,name:"University of Delhi",short:"DU",type:"Public",cat:"univ",est:1922,loc:"North Campus, Delhi",campus:600,students:"~300,000",faculty:"~4,000",nirf_o:"#15 Overall",nirf_m:"N/A",nirf_u:"N/A",naac:"A++",naacCls:"b-app",aacsb:"N/A",avgPkg:"Not disclosed",highPkg:"Not disclosed",place:"Varies by college",compat:15,flame:false,changed:true,
+   radar:[100,42,80,28,12,35],
+   srcs:[{l:"NIRF Overall #15",u:"https://www.nirfindia.org/Rankings/2024/OverallRanking.html"},{l:"DU official",u:"https://www.du.ac.in"},{l:"Wikipedia",u:"https://en.wikipedia.org/wiki/University_of_Delhi"}],
+   note:"NIRF Overall #15 (2024). ~90 affiliated colleges. 300,000+ students. NAAC A++. College-level placement; not centralised.",
+   corrs:[{f:"NIRF rank",o:"#11 University",n:"#15 Overall",s:"nirfindia.org 2024"}]},
+
+  {id:17,name:"Symbiosis Intl. Univ.",short:"SIU",type:"Deemed",cat:"mgmt",est:2002,loc:"Lavale, Pune, MH",campus:300,students:"~35,000",faculty:"~1,200",nirf_o:"N/A",nirf_m:"Band 26-50 (SIBM)",nirf_u:"N/A",naac:"A+",naacCls:"b-ap",aacsb:"N/A",avgPkg:"~₹8-10L (SIBM)",highPkg:"~₹25L (SIBM)",place:"~85%",compat:50,flame:false,changed:false,
+   radar:[100,55,72,62,65,45],
+   srcs:[{l:"SIU official",u:"https://www.siu.edu.in"},{l:"NIRF Mgmt 2024",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"},{l:"Careers360",u:"https://www.careers360.com/university/symbiosis-international-university-pune"}],
+   note:"300-acre campus in Lavale — same locality as FLAME. 15 constituent institutions. NAAC A+. SIBM Pune ranked ~#13 in NIRF Management 2024.",corrs:[]},
+
+  {id:18,name:"SPJIMR Mumbai",short:"SPJIMR",type:"Deemed",cat:"mgmt",est:1981,loc:"Vile Parle, Mumbai, MH",campus:45,students:"~800",faculty:"~90",nirf_o:"N/A",nirf_m:"#5-8 Management",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"Yes (AACSB)",avgPkg:"₹26.5L",highPkg:"₹72L",place:"100%",compat:76,flame:false,changed:false,
+   radar:[45,72,88,80,100,62],
+   srcs:[{l:"SPJIMR official",u:"https://www.spjimr.org"},{l:"NIRF Mgmt 2024",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"},{l:"Shiksha",u:"https://www.shiksha.com/mba/articles/nirf-ranking-2024-top-mba-colleges-in-india-blogId-174803"}],
+   note:"45-acre campus in Vile Parle West, Mumbai. AACSB accredited. 2024 batch: avg ₹26.5L, 100% placed. One of FLAME's strongest AACSB accreditation benchmarks.",corrs:[]},
+
+  {id:19,name:"XLRI Jamshedpur",short:"XLRI",type:"Deemed",cat:"mgmt",est:1949,loc:"Jamshedpur, JH",campus:40,students:"~720",faculty:"~85",nirf_o:"N/A",nirf_m:"#9 Management",nirf_u:"N/A",naac:"A",naacCls:"b-a",aacsb:"Yes (AACSB)",avgPkg:"₹31.2L (BM batch)",highPkg:"₹68L",place:"100%",compat:62,flame:false,changed:true,
+   radar:[40,68,92,78,100,58],
+   srcs:[{l:"XLRI official",u:"https://www.xlri.ac.in"},{l:"NIRF Mgmt #9",u:"https://www.nirfindia.org/Rankings/2024/ManagementRanking.html"},{l:"Shiksha",u:"https://www.shiksha.com/mba/articles/nirf-ranking-2024-top-mba-colleges-in-india-blogId-174803"}],
+   note:"NIRF Mgmt #9 (2024). AACSB accredited. 40-acre campus. Oldest PGDM institute in India (1949). 2024 BM batch: avg ₹31.2L, highest ₹68L, 100% placed.",
+   corrs:[{f:"NIRF Mgmt rank",o:"#6",n:"#9",s:"shiksha.com / nirfindia.org 2024"},{f:"Avg pkg",o:"₹25L",n:"₹31.2L (BM batch 2024)",s:"xlri.ac.in"}]}
+];
+
+function cc(v){return v>=70?"#1d9e75":v>=45?"#ef9f27":"#e24b4a";}
+function tc(t){return t==="Public"?"b-pub":t==="Private"?"b-pvt":"b-dmd";}
+
+/* ── MODULE SWITCH ── */
+function switchModule(v){
+  ["main","iqac","profiles"].forEach(m=>document.getElementById("mod-"+m).style.display="none");
+  document.getElementById("mod-"+v).style.display="";
+  if(v==="iqac") initIqac();
+  if(v==="profiles") buildProfiles();
+}
+
+/* ── FILTER & TABLE ── */
+function getFiltered(){
+  const type=document.getElementById("typeFilter").value;
+  const era=document.getElementById("eraFilter").value;
+  const cat=document.getElementById("catFilter").value;
+  const compat=document.getElementById("compatFilter").value;
+  return HEI.filter(h=>{
+    if(type!=="all"&&h.type!==type) return false;
+    if(era!=="all"){if(era==="post2000"&&h.est<2000)return false;if(era==="legacy"&&h.est>=2000)return false;}
+    if(cat!=="all"&&h.cat!==cat&&!h.flame) return false;
+    if(compat!=="all"){if(compat==="high"&&h.compat<70)return false;if(compat==="med"&&(h.compat<45||h.compat>=70))return false;if(compat==="low"&&h.compat>=45)return false;}
+    return true;
+  });
+}
+function applyFilters(){renderTable();}
+
+function renderTable(){
+  const data=getFiltered();
+  document.getElementById("tableBody").innerHTML=data.map((h,i)=>{
+    const c=cc(h.compat);
+    const corrBadge=h.changed?`<span class="b-corr">✎ corrected</span>`:"";
+    return `<tr class="${h.flame?"flame-row":""}" onclick="openDrawer(${h.id})">
+      <td style="color:var(--text-faint)">${i+1}</td>
+      <td><div class="inst-name">${h.name}${corrBadge}</div><div class="inst-sub">${h.loc} · est.${h.est}</div></td>
+      <td><span class="badge ${tc(h.type)}">${h.type}</span></td>
+      <td>${h.est}</td><td>${h.campus}ac</td><td>${h.students}</td>
+      <td style="font-size:10.5px">${h.nirf_o}</td>
+      <td style="font-size:10.5px">${h.nirf_m}</td>
+      <td style="font-size:10.5px">${h.nirf_u}</td>
+      <td><span class="badge ${h.naacCls}">${h.naac}</span></td>
+      <td style="font-weight:600">${h.avgPkg}</td>
+      <td>${h.highPkg}</td><td>${h.place}</td>
+      <td style="font-size:10px">${h.aacsb}</td>
+      <td><div class="compat-wrap"><div class="compat-bg"><div class="compat-fill" style="width:${h.compat}%;background:${c}"></div></div><span style="font-size:11px;font-weight:600;color:${c}">${h.compat}%</span></div></td>
+    </tr>`;
+  }).join("");
+}
+
+/* ── DRAWER ── */
+function openDrawer(id){
+  const h=HEI.find(x=>x.id===id);
+  const c=cc(h.compat);
+  document.getElementById("drawerContent").innerHTML=`
+    <h2>${h.name}</h2>
+    <div class="drawer-meta">${h.loc} &bull; Est. ${h.est} &bull; <span class="badge ${tc(h.type)}">${h.type}</span></div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="badge ${h.naacCls}">NAAC ${h.naac}</span>
+      <span class="badge ${h.naacCls}">${h.aacsb}</span>
+      <span class="badge" style="background:#e1f5ee;color:#0f6e56">Compat: ${h.compat}%</span>
+    </div>
+    <div class="drawer-grid">
+      <div class="dg-cell"><div class="v">${h.campus}ac</div><div class="l">Campus area</div></div>
+      <div class="dg-cell"><div class="v">${h.students}</div><div class="l">Students</div></div>
+      <div class="dg-cell"><div class="v">${h.avgPkg}</div><div class="l">Avg package</div></div>
+      <div class="dg-cell"><div class="v">${h.highPkg}</div><div class="l">Highest pkg</div></div>
+      <div class="dg-cell"><div class="v">${h.place}</div><div class="l">Placement %</div></div>
+      <div class="dg-cell"><div class="v">${h.faculty}</div><div class="l">Faculty</div></div>
+    </div>
+    <div class="drawer-section">NIRF 2024 ranks</div>
+    <div style="font-size:11px;line-height:1.9">
+      Overall: <strong>${h.nirf_o}</strong><br>
+      Management: <strong>${h.nirf_m}</strong><br>
+      University: <strong>${h.nirf_u}</strong>
+    </div>
+    <div class="drawer-section">Data note</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.65">${h.note}</div>
+    <div class="drawer-section">Verified sources</div>
+    <div>${h.srcs.map(s=>`<a href="${s.u}" class="src-link" target="_blank">${s.l}</a>`).join(" ")}</div>
+    ${h.corrs.length>0?`<div class="drawer-section">Corrections applied</div>${h.corrs.map(c=>`<div style="font-size:10.5px;padding:4px 0;border-bottom:1px solid var(--border)"><strong>${c.f}:</strong> <span style="color:#a32d2d;text-decoration:line-through">${c.o}</span> → <span style="color:var(--flame-green);font-weight:600">${c.n}</span><br><span style="color:var(--text-faint)">Source: ${c.s}</span></div>`).join("")}`:""}
+  `;
+  document.getElementById("overlay").classList.add("open");
+  document.getElementById("drawer").classList.add("open");
+}
+function closeDrawer(){
+  document.getElementById("overlay").classList.remove("open");
+  document.getElementById("drawer").classList.remove("open");
+}
+
+/* ── TAB SWITCH ── */
+let pkgCh,scCh,bbCh,radCh;
+function switchTab(name,el){
+  document.querySelectorAll(".tabs .tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  ["table","charts","radar","corrections","sources"].forEach(v=>document.getElementById("view-"+v).style.display="none");
+  document.getElementById("view-"+name).style.display="";
+  if(name==="charts") renderCharts();
+  if(name==="radar") initRadarSelect();
+  if(name==="corrections") buildCorrections();
+  if(name==="sources") buildSources();
+}
+
+function renderCharts(){
+  if(pkgCh) pkgCh.destroy();
+  if(scCh) scCh.destroy();
+  if(bbCh) bbCh.destroy();
+  const withPkg=HEI.filter(h=>h.avgPkg&&!h.avgPkg.includes("Not")&&!h.avgPkg.includes("~₹8")).sort((a,b)=>{
+    const pa=parseFloat(a.avgPkg.replace(/[^0-9.]/g,""));
+    const pb=parseFloat(b.avgPkg.replace(/[^0-9.]/g,""));
+    return pb-pa;
+  });
+  pkgCh=new Chart(document.getElementById("pkgChart").getContext("2d"),{type:"bar",
+    data:{labels:withPkg.map(h=>h.short),datasets:[{label:"Avg pkg",data:withPkg.map(h=>parseFloat(h.avgPkg.replace(/[^0-9.]/g,""))),backgroundColor:withPkg.map(h=>h.flame?"#1d9e75":"#b5d4f4"),borderRadius:4,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9},callback:v=>"₹"+v+"L"},grid:{color:"rgba(0,0,0,0.05)"}}}}});
+  scCh=new Chart(document.getElementById("scatterChart").getContext("2d"),{type:"scatter",
+    data:{datasets:[{label:"HEIs",data:HEI.map(h=>({x:h.campus,y:parseInt(h.students.replace(/[^0-9]/g,""))/1000,label:h.short})),backgroundColor:HEI.map(h=>h.flame?"#1d9e75":"rgba(55,138,221,0.6)"),pointRadius:HEI.map(h=>h.flame?9:5),pointStyle:HEI.map(h=>h.flame?"triangle":"circle")}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const h=HEI[ctx.dataIndex];return h.short+": "+h.campus+"ac, "+h.students+" students";}}}},scales:{x:{title:{display:true,text:"Campus (acres)",font:{size:9}},ticks:{font:{size:9}},grid:{color:"rgba(0,0,0,0.05)"}},y:{title:{display:true,text:"Students (000s)",font:{size:9}},ticks:{font:{size:9}},grid:{color:"rgba(0,0,0,0.05)"}}}}});
+  const haveNirf=HEI.filter(h=>h.nirf_o.match(/#\d+/));
+  bbCh=new Chart(document.getElementById("bubbleChart").getContext("2d"),{type:"bubble",
+    data:{datasets:[{label:"HEI",data:haveNirf.map(h=>{const r=parseInt(h.nirf_o.match(/#(\d+)/)[1]);return{x:r,y:h.compat,r:Math.max(6,h.compat/12),label:h.short};}),backgroundColor:haveNirf.map(h=>h.flame?"rgba(29,158,117,0.7)":"rgba(55,138,221,0.5)"),borderColor:haveNirf.map(h=>h.flame?"#1d9e75":"#378add"),borderWidth:1}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const h=haveNirf[ctx.dataIndex];return h.short+": NIRF "+h.nirf_o+", Compat "+h.compat+"%";}}}},scales:{x:{reverse:true,title:{display:true,text:"NIRF Rank (lower=better)",font:{size:9}},ticks:{font:{size:9}},grid:{color:"rgba(0,0,0,0.05)"}},y:{title:{display:true,text:"FLAME Compat %",font:{size:9}},ticks:{font:{size:9}},min:0,max:110,grid:{color:"rgba(0,0,0,0.05)"}}}}});
+}
+
+function initRadarSelect(){
+  const sel=document.getElementById("radarPeer");
+  sel.innerHTML='<option value="">Select institution...</option>'+HEI.filter(h=>!h.flame).map(h=>`<option value="${h.id}">${h.name}</option>`).join("");
+}
+function renderRadar(){
+  const id=parseInt(document.getElementById("radarPeer").value);
+  if(!id&&id!==0) return;
+  const peer=HEI.find(h=>h.id===id);
+  const flame=HEI[0];
+  if(radCh) radCh.destroy();
+  radCh=new Chart(document.getElementById("radarChart").getContext("2d"),{type:"radar",
+    data:{labels:["Campus","Research","Faculty","Pkg","Placement","Programs"],datasets:[
+      {label:"FLAME",data:flame.radar,backgroundColor:"rgba(29,158,117,0.12)",borderColor:"#1d9e75",pointBackgroundColor:"#1d9e75",borderWidth:2,pointRadius:3},
+      {label:peer.short,data:peer.radar,backgroundColor:"rgba(55,138,221,0.08)",borderColor:"#378add",pointBackgroundColor:"#378add",borderWidth:2,pointRadius:3,borderDash:[4,3]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{font:{size:8},stepSize:25},pointLabels:{font:{size:9}},grid:{color:"rgba(0,0,0,0.08)"}}}}});
+  const stronger=["Campus","Research","Faculty","Pkg","Placement","Programs"].filter((_,i)=>peer.radar[i]>flame.radar[i]);
+  const weaker=["Campus","Research","Faculty","Pkg","Placement","Programs"].filter((_,i)=>flame.radar[i]>peer.radar[i]);
+  document.getElementById("radarNote").innerHTML=`<div style="font-weight:600;margin-bottom:6px">${peer.name}</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px"><span class="badge ${peer.naacCls}">NAAC ${peer.naac}</span><span class="badge" style="background:#e1f5ee;color:#0f6e56">Compat ${peer.compat}%</span></div>
+    <div style="margin-bottom:6px"><span style="color:var(--flame-green);font-weight:600">${peer.short} leads:</span><br>${stronger.join(", ")||"—"}</div>
+    <div><span style="color:#a32d2d;font-weight:600">FLAME leads:</span><br>${weaker.join(", ")||"—"}</div>
+    <div style="display:flex;gap:10px;margin-top:10px;font-size:10px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:2px;background:#1d9e75;display:inline-block"></span>FLAME</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:2px;border-top:2px dashed #378add;display:inline-block"></span>${peer.short}</span>
+    </div>`;
+}
+
+function buildCorrections(){
+  const all=[];
+  HEI.forEach(h=>h.corrs.forEach(c=>all.push({inst:h.name,...c})));
+  document.getElementById("corrList").innerHTML=all.map(c=>`
+    <div style="display:grid;grid-template-columns:160px 1fr 1fr 2fr;gap:8px;padding:7px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:5px;font-size:11px;align-items:start">
+      <div style="font-weight:600">${c.inst}<div style="font-size:9px;font-weight:400;color:var(--text-muted)">${c.f}</div></div>
+      <div style="color:#a32d2d;text-decoration:line-through;font-size:10.5px">${c.o}</div>
+      <div style="color:var(--flame-green);font-weight:600;font-size:10.5px">${c.n}</div>
+      <div style="font-size:10px;color:var(--text-muted)">${c.s}</div>
+    </div>`).join("");
+}
+
+function buildSources(){
+  const rows=HEI.map(h=>`<tr><td style="font-weight:600;white-space:nowrap">${h.name}</td><td>${h.srcs.map(s=>`<a href="${s.u}" target="_blank">${s.l}</a>`).join("<br>")}</td></tr>`).join("");
+  document.getElementById("srcTable").innerHTML=`<thead><tr><th>Institution</th><th>Verified source URLs</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+/* ── IQAC MODULE ── */
+let iqacInitDone=false;
+function initIqac(){
+  if(iqacInitDone) return; iqacInitDone=true;
+  const YEARS=["2019-20","2020-21","2021-22","2022-23","2023-24"];
+  new Chart(document.getElementById("trendChart").getContext("2d"),{type:"line",
+    data:{labels:YEARS,datasets:[
+      {label:"FLAME",data:[7.8,8.2,8.9,10.1,9.63],borderColor:"#1d9e75",backgroundColor:"rgba(29,158,117,0.08)",borderWidth:2,pointRadius:4,tension:.3,fill:true},
+      {label:"Ashoka",data:[9.0,9.5,10.2,11.0,10.5],borderColor:"#378add",borderWidth:2,pointRadius:3,tension:.3,fill:false,borderDash:[4,3]},
+      {label:"JGU",data:[5.5,5.8,6.0,6.3,6.6],borderColor:"#ef9f27",borderWidth:2,pointRadius:3,tension:.3,fill:false,borderDash:[2,2]},
+      {label:"SPJIMR",data:[20,22,24,25,26.5],borderColor:"#7f77dd",borderWidth:2,pointRadius:3,tension:.3,fill:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9},callback:v=>"₹"+v+"L"},grid:{color:"rgba(0,0,0,0.05)"}}}}});
+  new Chart(document.getElementById("researchChart").getContext("2d"),{type:"bar",
+    data:{labels:YEARS,datasets:[{label:"Publications",data:[111,124,138,158,180],backgroundColor:"#1d9e75",borderRadius:3},{label:"Citations÷100",data:[6,7,8.5,10.5,12],backgroundColor:"#b5d4f4",borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{color:"rgba(0,0,0,0.05)"}}}}});
+}
+
+function switchIqacTab(name,el){
+  document.querySelectorAll("#mod-iqac .tabs .tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  ["trends","gap","accred"].forEach(v=>document.getElementById("iqac-"+v).style.display="none");
+  document.getElementById("iqac-"+name).style.display="";
+  if(name==="gap") initGap();
+}
+
+let gapDone=false;
+function initGap(){
+  if(gapDone) return; gapDone=true;
+  const CRIT=[{n:"C1 — Curricular aspects",v:82,t:90},{n:"C2 — Teaching-learning",v:85,t:92},{n:"C3 — Research & extension",v:70,t:90},{n:"C4 — Infrastructure",v:72,t:88},{n:"C5 — Student support",v:86,t:90},{n:"C6 — Governance",v:78,t:88},{n:"C7 — Institutional values",v:68,t:90}];
+  document.getElementById("naacGapBars").innerHTML=CRIT.map(c=>{
+    const p=Math.round(c.v/c.t*100);
+    const col=p>=90?"#1d9e75":p>=75?"#ef9f27":"#e24b4a";
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
+      <span style="width:180px;color:var(--text)">${c.n}</span>
+      <div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:${c.v}%;height:100%;background:${col};border-radius:4px"></div></div>
+      <span style="color:${col};font-weight:600;width:35px;text-align:right">${c.v}%</span>
+      <span style="font-size:9px;color:var(--text-faint);width:55px">target: ${c.t}%</span>
+    </div>`;}).join("");
+  const LABELS=["Mission","Faculty Qual.","Faculty Mgmt","Curriculum","Assurance","Intl. Focus","Strategy","Innovation","Research","Engagement","Ethics","Financial","Faculty Dev.","Student Quality","Outcomes"];
+  new Chart(document.getElementById("aacsb-radar").getContext("2d"),{type:"radar",
+    data:{labels:LABELS,datasets:[{label:"FLAME readiness",data:[82,62,74,85,68,55,78,72,45,80,76,70,65,88,82],backgroundColor:"rgba(29,158,117,0.12)",borderColor:"#1d9e75",pointBackgroundColor:"#1d9e75",borderWidth:2,pointRadius:2},{label:"AACSB threshold",data:Array(15).fill(80),backgroundColor:"rgba(55,138,221,0.04)",borderColor:"#378add",borderWidth:1,borderDash:[4,3],pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{font:{size:7},stepSize:25},pointLabels:{font:{size:8}},grid:{color:"rgba(0,0,0,0.07)"}}}}});
+}
+
+/* ── PROFILE CARDS ── */
+function buildProfiles(){
+  document.getElementById("profileGrid").innerHTML=HEI.map(h=>{
+    const c=cc(h.compat);
+    return `<div class="panel" style="${h.flame?"border:2px solid #1d9e75":""}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">
+        <div><div style="font-size:13px;font-weight:600">${h.name}${h.changed?`<span class="b-corr">✎</span>`:""}</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">${h.loc} · est. ${h.est}</div></div>
+        <span style="font-size:12px;font-weight:600;color:${c}">${h.compat}%</span>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+        <span class="badge ${tc(h.type)}">${h.type}</span>
+        <span class="badge ${h.naacCls}">NAAC ${h.naac}</span>
+        <span class="badge" style="background:var(--gray-100);color:var(--text-muted)">${h.aacsb}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px">
+        <div class="kpi"><div class="v" style="font-size:13px">${h.campus}ac</div><div class="l">Campus</div></div>
+        <div class="kpi"><div class="v" style="font-size:13px">${h.avgPkg}</div><div class="l">Avg pkg</div></div>
+        <div class="kpi"><div class="v" style="font-size:13px">${h.place}</div><div class="l">Placed</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:9.5px;margin-bottom:8px">
+        <div style="color:var(--text-muted)">Overall<br><span style="color:var(--text);font-weight:600">${h.nirf_o.replace(" (2024)","").replace(" Overall","")}</span></div>
+        <div style="color:var(--text-muted)">Mgmt<br><span style="color:var(--text);font-weight:600">${h.nirf_m.replace(" Management (2024)","").replace(" (2024)","")}</span></div>
+        <div style="color:var(--text-muted)">Univ<br><span style="color:var(--text);font-weight:600">${h.nirf_u.replace(" (2024)","")}</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px">
+        <span style="font-size:9px;color:var(--text-muted);width:70px;flex-shrink:0">FLAME compat.</span>
+        <div style="flex:1;height:5px;background:var(--gray-200);border-radius:3px;overflow:hidden"><div style="width:${h.compat}%;height:100%;background:${c};border-radius:3px"></div></div>
+        <span style="font-size:10px;font-weight:600;color:${c}">${h.compat}%</span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:7px;margin-top:2px">
+        <div style="font-size:9px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Sources</div>
+        ${h.srcs.map(s=>`<a href="${s.u}" class="src-link" target="_blank">${s.l}</a>`).join("")}
+        <div style="font-size:10px;color:var(--text-muted);line-height:1.55;margin-top:5px">${h.note.substring(0,120)}...</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const masterRows=HEI.map(h=>`<tr ${h.flame?'style="background:#f0fbf6"':''}>
+    <td style="font-weight:${h.flame?600:400};white-space:nowrap">${h.name}${h.changed?`<span class="b-corr">✎</span>`:""}</td>
+    <td><span class="badge ${tc(h.type)}">${h.type}</span></td>
+    <td>${h.est}</td><td>${h.campus}ac</td><td>${h.students}</td>
+    <td>${h.nirf_o}</td><td>${h.nirf_m}</td><td>${h.nirf_u}</td>
+    <td><span class="badge ${h.naacCls}">${h.naac}</span></td>
+    <td style="font-weight:600">${h.avgPkg}</td><td>${h.highPkg}</td><td>${h.place}</td>
+    <td>${h.srcs.map(s=>`<a href="${s.u}" target="_blank">${s.l}</a>`).join("<br>")}</td>
+  </tr>`).join("");
+  document.getElementById("masterSrcTable").innerHTML=`<thead><tr><th>Institution</th><th>Type</th><th>Est.</th><th>Campus</th><th>Students</th><th>NIRF Overall</th><th>NIRF Mgmt</th><th>NIRF Univ</th><th>NAAC</th><th>Avg Pkg</th><th>High Pkg</th><th>Place%</th><th>Source URLs</th></tr></thead><tbody>${masterRows}</tbody>`;
+}
+
+function switchProfileTab(name,el){
+  document.querySelectorAll("#mod-profiles .tabs .tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  document.getElementById("prof-cards").style.display=name==="cards"?"":"none";
+  document.getElementById("prof-master").style.display=name==="master"?"":"none";
+}
+
+/* ── FEED ── */
+const FEED=[
+  {color:"#1d9e75",text:"FLAME University receives NAAC A++ reaccreditation — valid till 2028",time:"2 min ago"},
+  {color:"#378add",text:"NIRF 2024 released — IIT Madras retains #1 Overall for 4th year",time:"18 min ago"},
+  {color:"#ef9f27",text:"Ashoka University: 100% placement, avg ₹10.5L, highest ₹35L (2023 batch)",time:"1 hr ago"},
+  {color:"#1d9e75",text:"SPJIMR receives AACSB accreditation renewal — 5 years",time:"3 hr ago"},
+  {color:"#7f77dd",text:"IIM Kozhikode moves to NIRF Mgmt #3, displacing IIM Calcutta",time:"5 hr ago"},
+  {color:"#e24b4a",text:"JGU placement avg ₹6.6L (MA Public Policy) — only official data published",time:"1 day ago"},
+  {color:"#ef9f27",text:"IIM Ahmedabad 2024: avg ₹34.45L, highest domestic ₹1.46 Cr",time:"2 days ago"}
+];
+document.getElementById("feedPanel").innerHTML=FEED.map(f=>`
+  <div class="feed-item">
+    <div class="feed-dot" style="background:${f.color}"></div>
+    <div><div class="feed-text">${f.text}</div><div class="feed-time">${f.time}</div></div>
+  </div>`).join("");
+
+let fi=0;
+setInterval(()=>{
+  const items=[
+    {color:"#1d9e75",text:"FLAME AACSB mentoring phase — Self-Evaluation Report in preparation",time:"Just now"},
+    {color:"#378add",text:"NIRF 2025 submissions open — deadline March 2025",time:"Just now"},
+    {color:"#ef9f27",text:"IIM-A placement 2024: 224 PPOs — highest ever",time:"Just now"}];
+  FEED.unshift(items[fi%items.length]);
+  FEED.pop();
+  fi++;
+  document.getElementById("feedPanel").innerHTML=FEED.map(f=>`
+    <div class="feed-item">
+      <div class="feed-dot" style="background:${f.color}"></div>
+      <div><div class="feed-text">${f.text}</div><div class="feed-time">${f.time}</div></div>
+    </div>`).join("");
+},14000);
+
+/* ── INIT ── */
+renderTable();
+</script>
+</body>
+</html>
